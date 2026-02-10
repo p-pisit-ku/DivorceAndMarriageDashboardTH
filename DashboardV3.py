@@ -676,7 +676,7 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 # Header
 # =========================================================
 
-st.title("📊 Divorce Forecast Dashboard Between 2007 - 2025")
+st.image("Divorce_Banner.jpg", use_container_width=True)
 st.markdown(f"*Model Comparison & Scenario Analysis*")
 
 # =========================================================
@@ -1095,17 +1095,6 @@ with tab1:
     # Prophet Section - Show Future Forecast Data
     with col1:
         st.markdown("### 🟦 Prophet")
-        st.markdown("**Future Forecast Preview**")
-        
-        if not prophet_future.empty:
-            # Show first 20 rows of future forecast
-            display_df = prophet_future
-            st.dataframe(
-                display_df,
-                use_container_width=True,
-                hide_index=True
-            )
-        
         # Display Prophet performance metrics (from calculate_prophet_metrics_from_forecast)
         if 'prophet_metrics_dict' in locals() or 'prophet_metrics_dict' in globals():
             st.markdown("**Performance:**")
@@ -1117,27 +1106,28 @@ with tab1:
                 st.metric("RMSE", f"{prophet_metrics_dict['RMSE']:.2f}")
             with metric_cols[2]:
                 st.metric("MAPE", f"{prophet_metrics_dict['MAPE']:.2f}%")
+        
+        st.markdown("**Future Forecast Preview**")
+        
+        if not prophet_future.empty:
+            # Show first 20 rows of future forecast
+            display_df = prophet_future
+            st.dataframe(
+                display_df,
+                use_container_width=True,
+                hide_index=True
+            )
+        
     
     # SARIMAX Section - Show Metrics
     with col2:
         st.markdown("### 🟥 SARIMAX")
-        st.markdown("**Model Metrics**")
         
         if not metrics_df.empty:
             # Normalize column names
             metrics_df.columns = metrics_df.columns.str.upper()
             
-            # Display SARIMAX metrics table
-            st.dataframe(
-                metrics_df.style.format(precision=2).background_gradient(
-                    subset=["MAE", "RMSE", "MAPE"],
-                    cmap="YlOrRd"
-                ),
-                use_container_width=True,
-                hide_index=True
-            )
-            
-            # Calculate and display average metrics
+            # Calculate and display average metrics BEFORE the table
             st.markdown("**Average Metrics:**")
             metric_cols = st.columns(3)
             
@@ -1151,6 +1141,18 @@ with tab1:
                 st.metric("RMSE", f"{avg_rmse:.2f}")
             with metric_cols[2]:
                 st.metric("MAPE", f"{avg_mape:.2f}%")
+            
+            st.markdown("**Model Metrics**")
+            
+            # Display SARIMAX metrics table
+            st.dataframe(
+                metrics_df.style.format(precision=2).background_gradient(
+                    subset=["MAE", "RMSE", "MAPE"],
+                    cmap="YlOrRd"
+                ),
+                use_container_width=True,
+                hide_index=True
+            )
         else:
             st.warning("⚠️ SARIMAX metrics data not loaded")
 
