@@ -33,8 +33,8 @@ DATA_FILES = {
     "sarimax_metrics": "sarimax_metrics.csv",
     "sarimax_rolling": "sarimax_rolling_forecast.csv",
     "prophet_future": "prophet_forecast_future.csv",
-    "sarimax_future": "sarimax_future.csv",
-    "scenario": "TestScenarioPred.csv"
+    "sarimax_future": "sarima_rolling_future_forecast.csv",
+    # "scenario": "TestScenarioPred.csv"
 }
 
 # Enhanced color scheme optimized for white backgrounds with semantic meaning
@@ -476,159 +476,159 @@ def format_number(number: float, decimals: int = 0) -> str:
     return f"{number:,.{decimals}f}"
 
 
-# =========================================================
-# Scenario Testing Functions
-# =========================================================
+# # =========================================================
+# # Scenario Testing Functions
+# # =========================================================
 
-def get_monthly_stats(df_scenario: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calculate Mean, Std, Min, Max by month (1-12)
-    to use as bounds for random simulation
-    """
-    if 'month' not in df_scenario.columns:
-        df_scenario['month'] = df_scenario['ds'].dt.month
+# def get_monthly_stats(df_scenario: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Calculate Mean, Std, Min, Max by month (1-12)
+#     to use as bounds for random simulation
+#     """
+#     if 'month' not in df_scenario.columns:
+#         df_scenario['month'] = df_scenario['ds'].dt.month
         
-    monthly_stats = df_scenario.groupby('month')['y'].agg(
-        avg='mean',
-        std='std',
-        floor_min=lambda x: x.quantile(0.2),
-        cap_max=lambda x: x.quantile(0.8)
-    ).reset_index()
+#     monthly_stats = df_scenario.groupby('month')['y'].agg(
+#         avg='mean',
+#         std='std',
+#         floor_min=lambda x: x.quantile(0.2),
+#         cap_max=lambda x: x.quantile(0.8)
+#     ).reset_index()
     
-    return monthly_stats
+#     return monthly_stats
 
 
-def generate_random_scenario(
-    monthly_stats: pd.DataFrame, 
-    start_date: pd.Timestamp, 
-    sim_years: int
-) -> pd.DataFrame:
-    """
-    Generate random scenario data based on monthly statistics
-    Uses normal distribution with mean/std and clips by min/max
-    """
-    future_rows = []
+# def generate_random_scenario(
+#     monthly_stats: pd.DataFrame, 
+#     start_date: pd.Timestamp, 
+#     sim_years: int
+# ) -> pd.DataFrame:
+#     """
+#     Generate random scenario data based on monthly statistics
+#     Uses normal distribution with mean/std and clips by min/max
+#     """
+#     future_rows = []
     
-    for i in range(1, sim_years + 1):
-        for month in range(1, 13):
-            stats = monthly_stats[monthly_stats['month'] == month].iloc[0]
+#     for i in range(1, sim_years + 1):
+#         for month in range(1, 13):
+#             stats = monthly_stats[monthly_stats['month'] == month].iloc[0]
             
-            # Random value using normal distribution
-            rand_val = np.random.normal(stats['avg'], stats['std'])
+#             # Random value using normal distribution
+#             rand_val = np.random.normal(stats['avg'], stats['std'])
             
-            # Clip to stay within bounds
-            final_val = np.clip(rand_val, stats['floor_min'], stats['cap_max'])
+#             # Clip to stay within bounds
+#             final_val = np.clip(rand_val, stats['floor_min'], stats['cap_max'])
             
-            # Calculate date
-            current_date = start_date + pd.DateOffset(years=(i-1), months=month)
+#             # Calculate date
+#             current_date = start_date + pd.DateOffset(years=(i-1), months=month)
             
-            future_rows.append({
-                'ds': current_date,
-                'y': final_val
-            })
+#             future_rows.append({
+#                 'ds': current_date,
+#                 'y': final_val
+#             })
             
-    return pd.DataFrame(future_rows)
+#     return pd.DataFrame(future_rows)
 
 
-def tune_prophet_hyperparameters(
-    df_train: pd.DataFrame, 
-    global_cap: float, 
-    global_floor: float,
-    n_samples: int = 20
-) -> Dict:
-    """
-    Perform hyperparameter tuning for Prophet model using cross-validation
-    Returns the best parameters found
-    """
-    from itertools import product
-    import random
+# def tune_prophet_hyperparameters(
+#     df_train: pd.DataFrame, 
+#     global_cap: float, 
+#     global_floor: float,
+#     n_samples: int = 20
+# ) -> Dict:
+#     """
+#     Perform hyperparameter tuning for Prophet model using cross-validation
+#     Returns the best parameters found
+#     """
+#     from itertools import product
+#     import random
     
-    # Define parameter grid (simplified for dashboard usage)
-    param_grid = {
-        'changepoint_prior_scale': [0.001, 0.01, 0.05, 0.1, 0.5],
-        'seasonality_prior_scale': [0.01, 0.1, 1.0, 10.0],
-        "yearly_seasonality": [True],
-        "weekly_seasonality": [False],
-        "daily_seasonality": [False]
-    }
+#     # Define parameter grid (simplified for dashboard usage)
+#     param_grid = {
+#         'changepoint_prior_scale': [0.001, 0.01, 0.05, 0.1, 0.5],
+#         'seasonality_prior_scale': [0.01, 0.1, 1.0, 10.0],
+#         "yearly_seasonality": [True],
+#         "weekly_seasonality": [False],
+#         "daily_seasonality": [False]
+#     }
     
-    # Generate all combinations
-    keys = param_grid.keys()
-    values = param_grid.values()
-    param_combinations = [dict(zip(keys, v)) for v in product(*values)]
+#     # Generate all combinations
+#     keys = param_grid.keys()
+#     values = param_grid.values()
+#     param_combinations = [dict(zip(keys, v)) for v in product(*values)]
     
-    best_params = None
-    best_mape = float('inf')
+#     best_params = None
+#     best_mape = float('inf')
     
-    # Sample combinations for faster tuning
-    random.seed(42)
-    sampled_combinations = random.sample(
-        param_combinations, 
-        min(n_samples, len(param_combinations))
-    )
+#     # Sample combinations for faster tuning
+#     random.seed(42)
+#     sampled_combinations = random.sample(
+#         param_combinations, 
+#         min(n_samples, len(param_combinations))
+#     )
     
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+#     progress_bar = st.progress(0)
+#     status_text = st.empty()
     
-    for idx, params in enumerate(sampled_combinations):
-        try:
-            status_text.text(f"Testing parameter combination {idx + 1}/{len(sampled_combinations)}...")
+#     for idx, params in enumerate(sampled_combinations):
+#         try:
+#             status_text.text(f"Testing parameter combination {idx + 1}/{len(sampled_combinations)}...")
             
-            # Split data for validation
-            train_size = int(len(df_train) * 0.8)
-            df_train_subset = df_train.iloc[:train_size].copy()
-            df_val = df_train.iloc[train_size:].copy()
+#             # Split data for validation
+#             train_size = int(len(df_train) * 0.8)
+#             df_train_subset = df_train.iloc[:train_size].copy()
+#             df_val = df_train.iloc[train_size:].copy()
             
-            # Train model with current parameters
-            m_val = Prophet(growth='logistic', **params)
-            m_val.fit(df_train_subset)
+#             # Train model with current parameters
+#             m_val = Prophet(growth='logistic', **params)
+#             m_val.fit(df_train_subset)
             
-            # Predict on validation set
-            future_val = m_val.make_future_dataframe(periods=len(df_val), freq='MS')
-            future_val['cap'] = global_cap
-            future_val['floor'] = global_floor
+#             # Predict on validation set
+#             future_val = m_val.make_future_dataframe(periods=len(df_val), freq='MS')
+#             future_val['cap'] = global_cap
+#             future_val['floor'] = global_floor
             
-            forecast_val = m_val.predict(future_val)
+#             forecast_val = m_val.predict(future_val)
             
-            # Calculate MAPE on validation set
-            y_true = df_val['y'].values
-            y_pred = forecast_val['yhat'].tail(len(df_val)).values
+#             # Calculate MAPE on validation set
+#             y_true = df_val['y'].values
+#             y_pred = forecast_val['yhat'].tail(len(df_val)).values
             
-            # Avoid division by zero
-            mask = y_true != 0
-            if mask.sum() > 0:
-                mape = np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
-            else:
-                mape = float('inf')
+#             # Avoid division by zero
+#             mask = y_true != 0
+#             if mask.sum() > 0:
+#                 mape = np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
+#             else:
+#                 mape = float('inf')
             
-            # Update best parameters if this is better
-            if mape < best_mape:
-                best_mape = mape
-                best_params = params.copy()
+#             # Update best parameters if this is better
+#             if mape < best_mape:
+#                 best_mape = mape
+#                 best_params = params.copy()
             
-            progress_bar.progress((idx + 1) / len(sampled_combinations))
+#             progress_bar.progress((idx + 1) / len(sampled_combinations))
             
-        except Exception as e:
-            # Skip this combination if it fails
-            continue
+#         except Exception as e:
+#             # Skip this combination if it fails
+#             continue
     
-    progress_bar.empty()
-    status_text.empty()
+#     progress_bar.empty()
+#     status_text.empty()
     
-    # Return best params or default if tuning failed
-    if best_params is None:
-        best_params = {
-            'changepoint_prior_scale': 0.05,
-            'seasonality_prior_scale': 10.0,
-            'yearly_seasonality': True,
-            'weekly_seasonality': False,
-            'daily_seasonality': False
-        }
-        st.warning("⚠️ Hyperparameter tuning failed, using default parameters")
-    else:
-        st.success(f"✨ Best parameters found! Validation MAPE: {best_mape:.4f}%")
+#     # Return best params or default if tuning failed
+#     if best_params is None:
+#         best_params = {
+#             'changepoint_prior_scale': 0.05,
+#             'seasonality_prior_scale': 10.0,
+#             'yearly_seasonality': True,
+#             'weekly_seasonality': False,
+#             'daily_seasonality': False
+#         }
+#         st.warning("⚠️ Hyperparameter tuning failed, using default parameters")
+#     else:
+#         st.success(f"✨ Best parameters found! Validation MAPE: {best_mape:.4f}%")
     
-    return best_params
+#     return best_params
 
 
 # =========================================================
@@ -677,7 +677,7 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 # =========================================================
 
 st.image("Divorce_Banner.jpg", use_container_width=True)
-st.markdown(f"*Model Comparison & Scenario Analysis*")
+st.markdown(f"*Model Comparison*")
 
 # =========================================================
 # Sidebar Filters
@@ -1075,13 +1075,17 @@ st.divider()
 # Tabbed Interface for Model Analysis
 # =========================================================
 
-tab1, tab2, tab3, tab4 = st.tabs([
+# tab1, tab2, tab3, tab4 = st.tabs([
+#     "📊 Model Metrics",
+#     "📉 Rolling Forecast",
+#     "🔮 Future Forecast",
+#     "🧪 Prophet Scenario Test"
+# ])
+tab1, tab2, tab3 = st.tabs([
     "📊 Model Metrics",
     "📉 Rolling Forecast",
-    "🔮 Future Forecast",
-    "🧪 Prophet Scenario Test"
+    "🔮 Future Forecast"
 ])
-
 # =========================================================
 # TAB 1: Model Metrics
 # =========================================================
@@ -1161,36 +1165,64 @@ with tab1:
 # =========================================================
 
 with tab2:
-    st.subheader("📉 Rolling Forecast Comparison")
+    st.subheader("📉 Divorce Forecast Comparison: SARIMAX vs Prophet")
     
-    fig_rolling = go.Figure()
+    fig_all = go.Figure()
     
-    # Add actual values from divorce_all_model.csv (using 'Divorce' column)
+    # =========================
+    # Actual
+    # =========================
     if "Divorce" in df.columns and "ds" in df.columns:
-        fig_rolling.add_trace(go.Scatter(
+        fig_all.add_trace(go.Scatter(
             x=df["ds"],
             y=df["Divorce"],
             name="Actual",
-            line=dict(color=COLORS["actual"], width=3),
-            mode='lines'
+            line=dict(color=COLORS["actual"], width=2)
         ))
     
-    # Add SARIMAX rolling forecast only
+    # =========================
+    # SARIMAX Rolling
+    # =========================
     if not arima_roll.empty:
-        fig_rolling.add_trace(go.Scatter(
+        fig_all.add_trace(go.Scatter(
             x=arima_roll["ds"],
-            y=arima_roll['forecast'],
-            name="SARIMAX Rolling Forecast",
-            line=dict(color=COLORS["sarimax"], width=2, dash="dash")
+            y=arima_roll["forecast"],
+            name="SARIMAX Rolling",
+            line=dict(color=COLORS["sarimax"], dash="dash")
         ))
     
-    fig_rolling.update_layout(
+    # =========================
+    # SARIMAX Future
+    # =========================
+    if not arima_future.empty:
+        fig_all.add_trace(go.Scatter(
+            x=arima_future["ds"],
+            y=arima_future["yhat"],
+            name="SARIMAX Future",
+            line=dict(color=COLORS["sarimax"], dash="dash", width=2)
+        ))
+    
+    # =========================
+    # Prophet Future
+    # =========================
+    if not prophet_future.empty:
+        fig_all.add_trace(go.Scatter(
+            x=prophet_future["ds"],
+            y=prophet_future["yhat"],
+            name="Prophet Future",
+            line=dict(color=COLORS["prophet"], dash="dash", width=2)
+        ))
+    
+    # =========================
+    # Layout
+    # =========================
+    fig_all.update_layout(
         title={
-            'text': "Rolling Forecast vs Actual Divorce Cases",
+            'text': "Divorce Forecast Comparison: SARIMAX vs Prophet",
             'font': {'size': 22, 'color': '#2C3E50', 'family': 'Arial Black'}
         },
         xaxis_title="Date",
-        yaxis_title="Divorce Count",
+        yaxis_title="Number of Divorces",
         hovermode="x unified",
         template="plotly_white",
         plot_bgcolor='rgba(240, 242, 245, 0.8)',
@@ -1198,19 +1230,27 @@ with tab2:
         font=dict(family="Arial, sans-serif", size=12, color="#2C3E50"),
         xaxis={'gridcolor': '#E1E8ED'},
         yaxis={'gridcolor': '#E1E8ED'},
-        height=550
+        height=700
     )
     
-    st.plotly_chart(fig_rolling, use_container_width=True)
+    st.plotly_chart(fig_all, use_container_width=True)
     
     # Show forecast data table
     if show_data_tables:
-        with st.expander("📋 View Rolling Forecast Data"):
-            st.markdown("**SARIMAX Rolling Forecast**")
-            if not arima_roll.empty:
-                st.dataframe(arima_roll.tail(20), use_container_width=True)
-            else:
-                st.warning("⚠️ SARIMAX rolling forecast data not loaded")
+        with st.expander("📋 View Forecast Data"):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**SARIMAX Rolling Forecast**")
+                if not arima_roll.empty:
+                    st.dataframe(arima_roll.tail(20), use_container_width=True)
+                else:
+                    st.warning("⚠️ SARIMAX rolling forecast data not loaded")
+            with col2:
+                st.markdown("**Future Forecasts**")
+                if not arima_future.empty:
+                    st.dataframe(arima_future.head(20), use_container_width=True)
+                if not prophet_future.empty:
+                    st.dataframe(prophet_future.head(20), use_container_width=True)
 
 # =========================================================
 # TAB 3: Future Forecast
@@ -1336,14 +1376,14 @@ with tab3:
                     x=arima_subset["ds"],
                     y=arima_subset["cap"],
                     name="Upper Bound (Cap)",
-                    line=dict(color=COLORS["sarimax"], width=1, dash="dot"),
+                    line=dict(color=COLORS["sarimax"], width=1, dash="dash"),
                     opacity=0.3
                 ))
                 fig_arima.add_trace(go.Scatter(
                     x=arima_subset["ds"],
                     y=arima_subset["floor"],
                     name="Lower Bound (Floor)",
-                    line=dict(color=COLORS["sarimax"], width=1, dash="dot"),
+                    line=dict(color=COLORS["sarimax"], width=1, dash="dash"),
                     fill='tonexty',
                     opacity=0.2
                 ))
@@ -1379,41 +1419,62 @@ with tab3:
         
         fig_combined = go.Figure()
         
-        # Add actual values
+        # =========================
+        # Actual
+        # =========================
         if not actual_data.empty:
             fig_combined.add_trace(go.Scatter(
                 x=actual_data["ds"],
                 y=actual_data["Divorce"],
-                name="Actual (Historical)",
-                line=dict(color=COLORS["actual"], width=3)
+                name="Actual",
+                line=dict(color=COLORS["actual"], width=2)
             ))
         
-        # Add both forecasts
-        if "Prophet" in models_to_show and not prophet_future.empty:
-            prophet_subset = prophet_future.head(forecast_months)
-            fig_combined.add_trace(go.Scatter(
-                x=prophet_subset["ds"],
-                y=prophet_subset["yhat"],
-                name="Prophet Forecast",
-                line=dict(color=COLORS["prophet"], width=2, dash="dash")
-            ))
+        # # =========================
+        # # SARIMAX Rolling
+        # # =========================
+        # if not arima_roll.empty:
+        #     fig_combined.add_trace(go.Scatter(
+        #         x=arima_roll["ds"],
+        #         y=arima_roll["forecast"],
+        #         name="SARIMAX Rolling",
+        #         line=dict(color=COLORS["sarimax"], dash="dot")
+        #     ))
         
+        # =========================
+        # SARIMAX Future
+        # =========================
         if "SARIMAX" in models_to_show and not arima_future.empty:
             arima_subset = arima_future.head(forecast_months)
             fig_combined.add_trace(go.Scatter(
                 x=arima_subset["ds"],
                 y=arima_subset["yhat"],
-                name="SARIMAX Forecast",
-                line=dict(color=COLORS["sarimax"], width=2, dash="dash")
+                name="SARIMAX Future",
+                line=dict(color=COLORS["sarimax"], dash="dash", width=2)
             ))
         
+        # =========================
+        # Prophet Future
+        # =========================
+        if "Prophet" in models_to_show and not prophet_future.empty:
+            prophet_subset = prophet_future.head(forecast_months)
+            fig_combined.add_trace(go.Scatter(
+                x=prophet_subset["ds"],
+                y=prophet_subset["yhat"],
+                name="Prophet Future",
+                line=dict(color=COLORS["prophet"], dash="dash", width=2)
+            ))
+        
+        # =========================
+        # Layout
+        # =========================
         fig_combined.update_layout(
             title={
-                'text': f"Combined Future Forecast Comparison ({forecast_months} months)",
+                'text': "Divorce Forecast Comparison: SARIMAX vs Prophet",
                 'font': {'size': 20, 'color': '#2C3E50', 'family': 'Arial Black'}
             },
             xaxis_title="Date",
-            yaxis_title="Predicted Divorce Count",
+            yaxis_title="Number of Divorces",
             hovermode="x unified",
             template="plotly_white",
             plot_bgcolor='rgba(240, 242, 245, 0.8)',
@@ -1421,287 +1482,287 @@ with tab3:
             font=dict(family="Arial, sans-serif", size=12, color="#2C3E50"),
             xaxis={'gridcolor': '#E1E8ED'},
             yaxis={'gridcolor': '#E1E8ED'},
-            height=600
+            height=700
         )
         
         st.plotly_chart(fig_combined, use_container_width=True)
 
-# =========================================================
-# TAB 4: Prophet Scenario Test
-# =========================================================
+# # =========================================================
+# # TAB 4: Prophet Scenario Test
+# # =========================================================
 
-with tab4:
-    st.subheader("🧪 Prophet Scenario Testing")
-    st.markdown("""
-    This tool allows you to test the Prophet model with scenario simulation based on historical monthly patterns.
-    The simulation generates synthetic future data using monthly statistics (mean, std, min, max) from a scenario period.
-    """)
+# with tab4:
+#     st.subheader("🧪 Prophet Scenario Testing")
+#     st.markdown("""
+#     This tool allows you to test the Prophet model with scenario simulation based on historical monthly patterns.
+#     The simulation generates synthetic future data using monthly statistics (mean, std, min, max) from a scenario period.
+#     """)
     
-    # User Controls
-    col1, col2, col3 = st.columns(3)
+#     # User Controls
+#     col1, col2, col3 = st.columns(3)
     
-    with col1:
-        sim_years = st.slider(
-            "Number of Simulation Years",
-            min_value=1,
-            max_value=10,
-            value=5,
-            help="How many years to simulate into the future"
-        )
+#     with col1:
+#         sim_years = st.slider(
+#             "Number of Simulation Years",
+#             min_value=1,
+#             max_value=10,
+#             value=5,
+#             help="How many years to simulate into the future"
+#         )
     
-    with col2:
-        use_best_params = st.checkbox(
-            "Use Hyperparameter Tuning",
-            value=True,
-            help="Automatically find optimal Prophet parameters"
-        )
+#     with col2:
+#         use_best_params = st.checkbox(
+#             "Use Hyperparameter Tuning",
+#             value=True,
+#             help="Automatically find optimal Prophet parameters"
+#         )
     
-    with col3:
-        show_components = st.checkbox(
-            "Show Monthly Statistics",
-            value=False,
-            help="Display monthly statistics table used for simulation"
-        )
+#     with col3:
+#         show_components = st.checkbox(
+#             "Show Monthly Statistics",
+#             value=False,
+#             help="Display monthly statistics table used for simulation"
+#         )
     
-    # Load Scenario Data
-    try:
-        df_scenario = pd.read_csv(DATA_FILES["scenario"])
-        df_scenario['ds'] = pd.to_datetime(df_scenario['ds'])
+#     # Load Scenario Data
+#     try:
+#         df_scenario = pd.read_csv(DATA_FILES["scenario"])
+#         df_scenario['ds'] = pd.to_datetime(df_scenario['ds'])
         
-        # Calculate monthly statistics
-        monthly_stats = get_monthly_stats(df_scenario.copy())
+#         # Calculate monthly statistics
+#         monthly_stats = get_monthly_stats(df_scenario.copy())
         
-        if show_components:
-            st.markdown("**📊 Monthly Statistics (from Scenario Data)**")
-            st.dataframe(monthly_stats.style.background_gradient(cmap="Blues"), use_container_width=True)
+#         if show_components:
+#             st.markdown("**📊 Monthly Statistics (from Scenario Data)**")
+#             st.dataframe(monthly_stats.style.background_gradient(cmap="Blues"), use_container_width=True)
         
-        # Generate Scenario Button
-        if st.button("🎲 Generate Scenario Forecast", type="primary"):
-            with st.spinner("Generating scenario and training model..."):
+#         # Generate Scenario Button
+#         if st.button("🎲 Generate Scenario Forecast", type="primary"):
+#             with st.spinner("Generating scenario and training model..."):
                 
-                # Get last date from historical data
-                last_date = df['ds'].max()
+#                 # Get last date from historical data
+#                 last_date = df['ds'].max()
                 
-                # Generate random scenario
-                df_simulated = generate_random_scenario(
-                    monthly_stats=monthly_stats,
-                    start_date=last_date,
-                    sim_years=sim_years
-                )
+#                 # Generate random scenario
+#                 df_simulated = generate_random_scenario(
+#                     monthly_stats=monthly_stats,
+#                     start_date=last_date,
+#                     sim_years=sim_years
+#                 )
                 
-                # Data Augmentation: Combine real + simulated
-                df_augmented = pd.concat([
-                    df_scenario[['ds', 'y']],
-                    df_simulated
-                ], ignore_index=True)
+#                 # Data Augmentation: Combine real + simulated
+#                 df_augmented = pd.concat([
+#                     df_scenario[['ds', 'y']],
+#                     df_simulated
+#                 ], ignore_index=True)
                 
-                # Set Global Cap/Floor for Logistic Growth
-                global_cap = df_augmented['y'].max() * 1.2
-                global_floor = 0
+#                 # Set Global Cap/Floor for Logistic Growth
+#                 global_cap = df_augmented['y'].max() * 1.2
+#                 global_floor = 0
                 
-                df_augmented['cap'] = global_cap
-                df_augmented['floor'] = global_floor
+#                 df_augmented['cap'] = global_cap
+#                 df_augmented['floor'] = global_floor
                 
-                # Perform hyperparameter tuning if enabled
-                if use_best_params:
-                    st.info("🔍 Performing hyperparameter tuning on scenario data...")
-                    best_params = tune_prophet_hyperparameters(df_augmented, global_cap, global_floor)
-                else:
-                    # Use default parameters when tuning is disabled
-                    best_params = {
-                        'changepoint_prior_scale': 0.05,
-                        'seasonality_prior_scale': 10.0,
-                        'yearly_seasonality': True,
-                        'weekly_seasonality': False,
-                        'daily_seasonality': False
-                    }
-                    st.info("ℹ️ Using default parameters (tuning disabled)")
+#                 # Perform hyperparameter tuning if enabled
+#                 if use_best_params:
+#                     st.info("🔍 Performing hyperparameter tuning on scenario data...")
+#                     best_params = tune_prophet_hyperparameters(df_augmented, global_cap, global_floor)
+#                 else:
+#                     # Use default parameters when tuning is disabled
+#                     best_params = {
+#                         'changepoint_prior_scale': 0.05,
+#                         'seasonality_prior_scale': 10.0,
+#                         'yearly_seasonality': True,
+#                         'weekly_seasonality': False,
+#                         'daily_seasonality': False
+#                     }
+#                     st.info("ℹ️ Using default parameters (tuning disabled)")
                 
-                # Display the parameters being used
-                with st.expander("📋 View Model Parameters"):
-                    st.json(best_params)
+#                 # Display the parameters being used
+#                 with st.expander("📋 View Model Parameters"):
+#                     st.json(best_params)
                 
-                # Train Prophet Model with tuned/default parameters
-                m_scenario = Prophet(
-                    growth="logistic",
-                    **best_params
-                )
+#                 # Train Prophet Model with tuned/default parameters
+#                 m_scenario = Prophet(
+#                     growth="logistic",
+#                     **best_params
+#                 )
                 
-                m_scenario.fit(df_augmented)
+#                 m_scenario.fit(df_augmented)
                 
-                # Make Future Predictions
-                future = m_scenario.make_future_dataframe(periods=60, freq='MS')
-                future['cap'] = global_cap
-                future['floor'] = global_floor
+#                 # Make Future Predictions
+#                 future = m_scenario.make_future_dataframe(periods=60, freq='MS')
+#                 future['cap'] = global_cap
+#                 future['floor'] = global_floor
                 
-                forecast_scenario = m_scenario.predict(future)
+#                 forecast_scenario = m_scenario.predict(future)
                 
-                # Visualization
-                st.success("✅ Scenario forecast generated successfully!")
+#                 # Visualization
+#                 st.success("✅ Scenario forecast generated successfully!")
                 
-                st.markdown("### 📈 Scenario Forecast Visualization")
+#                 st.markdown("### 📈 Scenario Forecast Visualization")
                 
-                fig_scenario = go.Figure()
+#                 fig_scenario = go.Figure()
                 
-                # Add actual historical data
-                fig_scenario.add_trace(go.Scatter(
-                    x=df_scenario['ds'],
-                    y=df_scenario['y'],
-                    name="Actual History (Scenario Period)",
-                    mode='lines',
-                    line=dict(color=COLORS["actual"], width=2)
-                ))
+#                 # Add actual historical data
+#                 fig_scenario.add_trace(go.Scatter(
+#                     x=df_scenario['ds'],
+#                     y=df_scenario['y'],
+#                     name="Actual History (Scenario Period)",
+#                     mode='lines',
+#                     line=dict(color=COLORS["actual"], width=2)
+#                 ))
                 
-                # Add simulated data line
-                fig_scenario.add_trace(go.Scatter(
-                    x=df_simulated['ds'],
-                    y=df_simulated['y'],
-                    name="Simulated Data",
-                    mode='lines+markers',
-                    line=dict(color=COLORS["simulated"], width=2),
-                    marker=dict(color=COLORS["simulated"], size=5, opacity=0.7)
-                ))
+#                 # Add simulated data line
+#                 fig_scenario.add_trace(go.Scatter(
+#                     x=df_simulated['ds'],
+#                     y=df_simulated['y'],
+#                     name="Simulated Data",
+#                     mode='lines+markers',
+#                     line=dict(color=COLORS["simulated"], width=2),
+#                     marker=dict(color=COLORS["simulated"], size=5, opacity=0.7)
+#                 ))
                 
-                # Add forecast line
-                fig_scenario.add_trace(go.Scatter(
-                    x=forecast_scenario['ds'],
-                    y=forecast_scenario['yhat'],
-                    name="Prophet Scenario Forecast",
-                    line=dict(color=COLORS["prophet"], width=2, dash='dash')
-                ))
+#                 # Add forecast line
+#                 fig_scenario.add_trace(go.Scatter(
+#                     x=forecast_scenario['ds'],
+#                     y=forecast_scenario['yhat'],
+#                     name="Prophet Scenario Forecast",
+#                     line=dict(color=COLORS["prophet"], width=2, dash='dash')
+#                 ))
                 
-                # Add confidence intervals
-                if show_confidence_intervals:
-                    fig_scenario.add_trace(go.Scatter(
-                        x=forecast_scenario['ds'],
-                        y=forecast_scenario['yhat_upper'],
-                        name="Upper Bound",
-                        line=dict(color=COLORS["prophet"], width=1, dash='dot'),
-                        opacity=0.3
-                    ))
+#                 # Add confidence intervals
+#                 if show_confidence_intervals:
+#                     fig_scenario.add_trace(go.Scatter(
+#                         x=forecast_scenario['ds'],
+#                         y=forecast_scenario['yhat_upper'],
+#                         name="Upper Bound",
+#                         line=dict(color=COLORS["prophet"], width=1, dash='dot'),
+#                         opacity=0.3
+#                     ))
                     
-                    fig_scenario.add_trace(go.Scatter(
-                        x=forecast_scenario['ds'],
-                        y=forecast_scenario['yhat_lower'],
-                        name="Lower Bound",
-                        line=dict(color=COLORS["prophet"], width=1, dash='dot'),
-                        fill='tonexty',
-                        opacity=0.2
-                    ))
+#                     fig_scenario.add_trace(go.Scatter(
+#                         x=forecast_scenario['ds'],
+#                         y=forecast_scenario['yhat_lower'],
+#                         name="Lower Bound",
+#                         line=dict(color=COLORS["prophet"], width=1, dash='dot'),
+#                         fill='tonexty',
+#                         opacity=0.2
+#                     ))
                 
-                fig_scenario.update_layout(
-                    title={
-                        'text': f"Prophet Scenario Test ({sim_years} Years Simulation)",
-                        'font': {'size': 22, 'color': '#2C3E50', 'family': 'Arial Black'}
-                    },
-                    xaxis_title="Date",
-                    yaxis_title="Divorce Count",
-                    hovermode="x unified",
-                    template="plotly_white",
-                    plot_bgcolor='rgba(240, 242, 245, 0.8)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(family="Arial, sans-serif", size=12, color="#2C3E50"),
-                    xaxis={'gridcolor': '#E1E8ED'},
-                    yaxis={'gridcolor': '#E1E8ED'},
-                    height=650
-                )
+#                 fig_scenario.update_layout(
+#                     title={
+#                         'text': f"Prophet Scenario Test ({sim_years} Years Simulation)",
+#                         'font': {'size': 22, 'color': '#2C3E50', 'family': 'Arial Black'}
+#                     },
+#                     xaxis_title="Date",
+#                     yaxis_title="Divorce Count",
+#                     hovermode="x unified",
+#                     template="plotly_white",
+#                     plot_bgcolor='rgba(240, 242, 245, 0.8)',
+#                     paper_bgcolor='rgba(0,0,0,0)',
+#                     font=dict(family="Arial, sans-serif", size=12, color="#2C3E50"),
+#                     xaxis={'gridcolor': '#E1E8ED'},
+#                     yaxis={'gridcolor': '#E1E8ED'},
+#                     height=650
+#                 )
                 
-                st.plotly_chart(fig_scenario, use_container_width=True)
+#                 st.plotly_chart(fig_scenario, use_container_width=True)
                 
-                # Show statistics
-                col1, col2, col3 = st.columns(3)
+#                 # Show statistics
+#                 col1, col2, col3 = st.columns(3)
                 
-                with col1:
-                    st.metric(
-                        "Simulated Data Points",
-                        f"{len(df_simulated)}"
-                    )
+#                 with col1:
+#                     st.metric(
+#                         "Simulated Data Points",
+#                         f"{len(df_simulated)}"
+#                     )
                 
-                with col2:
-                    avg_simulated = df_simulated['y'].mean()
-                    st.metric(
-                        "Avg Simulated Value",
-                        f"{avg_simulated:,.0f}"
-                    )
+#                 with col2:
+#                     avg_simulated = df_simulated['y'].mean()
+#                     st.metric(
+#                         "Avg Simulated Value",
+#                         f"{avg_simulated:,.0f}"
+#                     )
                 
-                with col3:
-                    final_forecast = forecast_scenario['yhat'].iloc[-1]
-                    st.metric(
-                        "Final Forecast Value",
-                        f"{final_forecast:,.0f}"
-                    )
+#                 with col3:
+#                     final_forecast = forecast_scenario['yhat'].iloc[-1]
+#                     st.metric(
+#                         "Final Forecast Value",
+#                         f"{final_forecast:,.0f}"
+#                     )
                 
-                # Show data tables
-                if show_data_tables:
-                    with st.expander("📋 View Scenario Data Details"):
-                        tab_a, tab_b, tab_c = st.tabs([
-                            "Simulated Data",
-                            "Augmented Dataset",
-                            "Forecast Results"
-                        ])
+#                 # Show data tables
+#                 if show_data_tables:
+#                     with st.expander("📋 View Scenario Data Details"):
+#                         tab_a, tab_b, tab_c = st.tabs([
+#                             "Simulated Data",
+#                             "Augmented Dataset",
+#                             "Forecast Results"
+#                         ])
                         
-                        with tab_a:
-                            st.markdown("**Randomly Generated Simulation Data**")
-                            st.dataframe(df_simulated, use_container_width=True)
+#                         with tab_a:
+#                             st.markdown("**Randomly Generated Simulation Data**")
+#                             st.dataframe(df_simulated, use_container_width=True)
                         
-                        with tab_b:
-                            st.markdown("**Combined Real + Simulated Data**")
-                            st.dataframe(df_augmented.tail(100), use_container_width=True)
+#                         with tab_b:
+#                             st.markdown("**Combined Real + Simulated Data**")
+#                             st.dataframe(df_augmented.tail(100), use_container_width=True)
                         
-                        with tab_c:
-                            st.markdown("**Prophet Forecast Output**")
-                            display_cols = ['ds', 'yhat', 'yhat_lower', 'yhat_upper', 'trend']
-                            st.dataframe(
-                                forecast_scenario[display_cols].tail(60),
-                                use_container_width=True
-                            )
+#                         with tab_c:
+#                             st.markdown("**Prophet Forecast Output**")
+#                             display_cols = ['ds', 'yhat', 'yhat_lower', 'yhat_upper', 'trend']
+#                             st.dataframe(
+#                                 forecast_scenario[display_cols].tail(60),
+#                                 use_container_width=True
+#                             )
         
-        else:
-            st.info("👆 Click the button above to generate a scenario forecast")
+#         else:
+#             st.info("👆 Click the button above to generate a scenario forecast")
             
-            # Show preview of scenario data
-            st.markdown("### 📊 Scenario Data Preview")
-            st.markdown(f"**Data Range:** {df_scenario['ds'].min().date()} to {df_scenario['ds'].max().date()}")
-            st.markdown(f"**Total Records:** {len(df_scenario)}")
+#             # Show preview of scenario data
+#             st.markdown("### 📊 Scenario Data Preview")
+#             st.markdown(f"**Data Range:** {df_scenario['ds'].min().date()} to {df_scenario['ds'].max().date()}")
+#             st.markdown(f"**Total Records:** {len(df_scenario)}")
             
-            # Preview chart
-            fig_preview = go.Figure()
-            fig_preview.add_trace(go.Scatter(
-                x=df_scenario['ds'],
-                y=df_scenario['y'],
-                name="Scenario Data",
-                line=dict(color=COLORS["actual"], width=2),
-                fill='tozeroy',
-                fillcolor='rgba(0,0,0,0.1)'
-            ))
+#             # Preview chart
+#             fig_preview = go.Figure()
+#             fig_preview.add_trace(go.Scatter(
+#                 x=df_scenario['ds'],
+#                 y=df_scenario['y'],
+#                 name="Scenario Data",
+#                 line=dict(color=COLORS["actual"], width=2),
+#                 fill='tozeroy',
+#                 fillcolor='rgba(0,0,0,0.1)'
+#             ))
             
-            fig_preview.update_layout(
-                title={
-                    'text': "Scenario Data (Used for Monthly Statistics)",
-                    'font': {'size': 18, 'color': '#2C3E50', 'family': 'Arial Black'}
-                },
-                xaxis_title="Date",
-                yaxis_title="Divorce Count",
-                template="plotly_white",
-                plot_bgcolor='rgba(240, 242, 245, 0.8)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(family="Arial, sans-serif", size=12, color="#2C3E50"),
-                xaxis={'gridcolor': '#E1E8ED'},
-                yaxis={'gridcolor': '#E1E8ED'},
-                height=400
-            )
+#             fig_preview.update_layout(
+#                 title={
+#                     'text': "Scenario Data (Used for Monthly Statistics)",
+#                     'font': {'size': 18, 'color': '#2C3E50', 'family': 'Arial Black'}
+#                 },
+#                 xaxis_title="Date",
+#                 yaxis_title="Divorce Count",
+#                 template="plotly_white",
+#                 plot_bgcolor='rgba(240, 242, 245, 0.8)',
+#                 paper_bgcolor='rgba(0,0,0,0)',
+#                 font=dict(family="Arial, sans-serif", size=12, color="#2C3E50"),
+#                 xaxis={'gridcolor': '#E1E8ED'},
+#                 yaxis={'gridcolor': '#E1E8ED'},
+#                 height=400
+#             )
             
-            st.plotly_chart(fig_preview, use_container_width=True)
+#             st.plotly_chart(fig_preview, use_container_width=True)
     
-    except FileNotFoundError:
-        st.error(f"""
-        ❌ **Scenario data file not found!**
+#     except FileNotFoundError:
+#         st.error(f"""
+#         ❌ **Scenario data file not found!**
         
-        Please make sure `{DATA_FILES['scenario']}` exists in the same directory.
-        This file should contain historical data with columns: `ds` (date) and `y` (value).
-        """)
-    except Exception as e:
-        st.error(f"❌ An error occurred: {str(e)}")
+#         Please make sure `{DATA_FILES['scenario']}` exists in the same directory.
+#         This file should contain historical data with columns: `ds` (date) and `y` (value).
+#         """)
+#     except Exception as e:
+#         st.error(f"❌ An error occurred: {str(e)}")
 
 # =========================================================
 # Footer
