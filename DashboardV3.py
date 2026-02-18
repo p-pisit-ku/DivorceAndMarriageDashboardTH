@@ -391,7 +391,7 @@ def generate_prophet_future_forecast(_model, df_prophet: pd.DataFrame, periods: 
 
 @st.cache_data(show_spinner="Loading model metrics...")
 def load_metrics() -> pd.DataFrame:
-    """Load model metrics for Prophet and SARIMAX"""
+    """Load model metrics for Prophet and SARIMA"""
     try:
         prophet = pd.read_csv(DATA_FILES["prophet_metrics"])
         arima = pd.read_csv(DATA_FILES["sarimax_metrics"])
@@ -419,18 +419,18 @@ def load_metrics() -> pd.DataFrame:
 
 
 
-@st.cache_data(show_spinner="Loading SARIMAX rolling forecast...")
+@st.cache_data(show_spinner="Loading SARIMA rolling forecast...")
 def load_sarimax_rolling() -> pd.DataFrame:
-    """Load SARIMAX rolling forecast data only"""
+    """Load SARIMA rolling forecast data only"""
     try:
         arima_roll = pd.read_csv(DATA_FILES["sarimax_rolling"])
         arima_roll["ds"] = pd.to_datetime(arima_roll["ds"])
         return arima_roll
     except FileNotFoundError as e:
-        st.error(f"❌ SARIMAX rolling forecast file not found: {str(e)}")
+        st.error(f"❌ SARIMA rolling forecast file not found: {str(e)}")
         return pd.DataFrame()
     except Exception as e:
-        st.error(f"❌ Error loading SARIMAX rolling forecast: {str(e)}")
+        st.error(f"❌ Error loading SARIMA rolling forecast: {str(e)}")
         return pd.DataFrame()
 
 
@@ -740,7 +740,7 @@ st.sidebar.divider()
 
 # Model Selection (Fixed to both models for)
 models_to_show = ["Prophet", "SARIMAX"]
-st.sidebar.info("**📊 Models:** Prophet & SARIMAX")
+st.sidebar.info("**📊 Models:** Prophet & SARIMA")
 
 # Display Options
 st.sidebar.subheader("⚙️ Display Options")
@@ -1125,7 +1125,7 @@ with tab1:
     
     # SARIMAX Section - Show Metrics
     with col2:
-        st.markdown("### 🟥 SARIMAX")
+        st.markdown("### 🟥 SARIMA")
         
         if not metrics_df.empty:
             # Normalize column names
@@ -1158,14 +1158,14 @@ with tab1:
                 hide_index=True
             )
         else:
-            st.warning("⚠️ SARIMAX metrics data not loaded")
+            st.warning("⚠️ SARIMA metrics data not loaded")
 
 # =========================================================
 # TAB 2: Rolling Forecast
 # =========================================================
 
 with tab2:
-    st.subheader("📉 Divorce Forecast Comparison: SARIMAX vs Prophet")
+    st.subheader("📉 Divorce Forecast Comparison: SARIMA vs Prophet")
     
     fig_all = go.Figure()
     
@@ -1181,13 +1181,13 @@ with tab2:
         ))
     
     # =========================
-    # SARIMAX Rolling
+    # SARIMA Rolling
     # =========================
     if not arima_roll.empty:
         fig_all.add_trace(go.Scatter(
             x=arima_roll["ds"],
             y=arima_roll["forecast"],
-            name="SARIMAX Rolling",
+            name="SARIMA Rolling",
             line=dict(color=COLORS["sarimax"], dash="dash")
         ))
     
@@ -1198,7 +1198,7 @@ with tab2:
         fig_all.add_trace(go.Scatter(
             x=arima_future["ds"],
             y=arima_future["yhat"],
-            name="SARIMAX Future",
+            name="SARIMA Future",
             line=dict(color=COLORS["sarimax"], dash="dash", width=2)
         ))
     
@@ -1218,7 +1218,7 @@ with tab2:
     # =========================
     fig_all.update_layout(
         title={
-            'text': "Divorce Forecast Comparison: SARIMAX vs Prophet",
+            'text': "Divorce Forecast Comparison: SARIMA vs Prophet",
             'font': {'size': 22, 'color': '#2C3E50', 'family': 'Arial Black'}
         },
         xaxis_title="Date",
@@ -1240,7 +1240,7 @@ with tab2:
         with st.expander("📋 View Forecast Data"):
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown("**SARIMAX Rolling Forecast**")
+                st.markdown("**SARIMA Rolling Forecast**")
                 if not arima_roll.empty:
                     st.dataframe(arima_roll.tail(20), use_container_width=True)
                 else:
@@ -1390,7 +1390,7 @@ with tab3:
             
             fig_arima.update_layout(
                 title={
-                    'text': f"SARIMAX Future Forecast ({forecast_months} months)",
+                    'text': f"SARIMA Future Forecast ({forecast_months} months)",
                     'font': {'size': 20, 'color': '#2C3E50', 'family': 'Arial Black'}
                 },
                 xaxis_title="Date",
@@ -1449,7 +1449,7 @@ with tab3:
             fig_combined.add_trace(go.Scatter(
                 x=arima_subset["ds"],
                 y=arima_subset["yhat"],
-                name="SARIMAX Future",
+                name="SARIMA Future",
                 line=dict(color=COLORS["sarimax"], dash="dash", width=2)
             ))
         
@@ -1470,7 +1470,7 @@ with tab3:
         # =========================
         fig_combined.update_layout(
             title={
-                'text': "Divorce Forecast Comparison: SARIMAX vs Prophet",
+                'text': "Divorce Forecast Comparison: SARIMA vs Prophet",
                 'font': {'size': 20, 'color': '#2C3E50', 'family': 'Arial Black'}
             },
             xaxis_title="Date",
@@ -1769,6 +1769,7 @@ with tab3:
 # =========================================================
 
 st.divider()
-st.caption(f"🔮 Forecast Models: Prophet • SARIMAX")
+st.caption(f"🔮 Forecast Models: Prophet • SARIMA")
 st.caption("📊 Enhanced with improved visualizations, error handling, and user experience")
+
 st.caption("💡 Data Source: https://stat.bora.dopa.go.th/stat/statnew/statMenu/newStat/home.php")
